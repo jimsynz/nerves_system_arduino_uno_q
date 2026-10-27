@@ -91,3 +91,12 @@ path = [
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 James Harton"
 SPDX-License-Identifier = "Apache-2.0"
+
+# From https://github.com/arduino/docs-content
+[[annotations]]
+path = [
+ "assets/images/arduino_uno_q.svg"
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Arduino S.r.l."
+SPDX-License-Identifier = "CC-BY-SA-4.0"

@@ -3,6 +3,9 @@
 This is the base Nerves System configuration for the
 [Arduino UNO Q](https://docs.arduino.cc/hardware/uno-q).
 
+![Arduino UNO Q](assets/images/arduino_uno_q.svg)
+<br><sup>Image from the [Arduino documentation](https://github.com/arduino/docs-content), [CC-BY-SA-4.0](https://creativecommons.org/licenses/by-sa/4.0/)</sup>
+
 | Feature        | Description                                         |
 | -------------- | --------------------------------------------------- |
 | CPU            | Qualcomm QRB2210, quad-core Cortex-A53              |
