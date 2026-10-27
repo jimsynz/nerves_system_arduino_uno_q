@@ -95,7 +95,7 @@ SPDX-License-Identifier = "Apache-2.0"
 # From https://github.com/arduino/docs-content
 [[annotations]]
 path = [
- "assets/images/arduino_uno_q.svg"
+ "assets/images/arduino_uno_q.webp"
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Arduino S.r.l."
