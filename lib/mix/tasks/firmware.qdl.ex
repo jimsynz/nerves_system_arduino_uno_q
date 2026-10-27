@@ -21,10 +21,14 @@ defmodule Mix.Tasks.Firmware.Qdl do
 
   ## Requirements
 
-    * `fwup` and [`qdl`](https://github.com/linux-msm/qdl) on your `PATH`
+    * `fwup` on your `PATH`
     * access to USB device `05c6:9008`. On Linux, add a udev rule such as:
 
           SUBSYSTEMS=="usb", ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="9008", MODE="0660", GROUP="plugdev"
+
+  It uses [`qdl`](https://github.com/linux-msm/qdl) to talk to the board. If
+  `qdl` isn't on your `PATH`, it downloads Arduino's prebuilt `qdl` for your
+  computer.
 
   ## Options
 
@@ -40,6 +44,25 @@ defmodule Mix.Tasks.Firmware.Qdl do
   @bundle "unoq-bootloader-emmc-linux-251020"
   @bundle_url "https://downloads.arduino.cc/debian-im/#{@bundle}.zip"
   @bundle_sha256 "c606e95d0107f8c58d0dd9494e00624d1db7c4361cca20513bc78ef02ca28dd1"
+
+  @qdl_version "v2.5-30"
+  @qdl_url "https://github.com/arduino/qdl-packing/releases/download/#{@qdl_version}"
+  @qdl_builds %{
+    {:linux, "x86_64"} =>
+      {"Linux_64bit", "b8d3f1efbba801b0bb90c5d2960d5f41c7c30bfe5f10293848f93760de621863"},
+    {:linux, "aarch64"} =>
+      {"Linux_ARM64", "d26f91a00f5c58e3b995d05439b6c0fc11c00902ee1d2cc6864dbb57c2f0949c"},
+    {:linux, "arm"} =>
+      {"Linux_ARMv6", "388907f058692e275de90671501f8547e1a7c37074e3f81b4c3ec4bbb4e68709"},
+    {:linux, "i686"} =>
+      {"Linux_32bit", "0f5dd5ecee1ea14d94a084daa89a51714a717806c43d287af89b8e4a0e5497db"},
+    {:darwin, "x86_64"} =>
+      {"macOS_64bit", "3ddf854057f30c137d4d06fd4b43af882475e2014322f118c51d4995da6b53b5"},
+    {:darwin, "aarch64"} =>
+      {"macOS_arm64", "bf73fa12b124c568286b220f8b7e5826993160575e9f12b084f10f4b56f35b1a"},
+    {:windows, :any} =>
+      {"Windows_32bit", "8433e43ea1ae38179dd400a2502ca639ddb63b0883d649850c706fc908f7b33e"}
+  }
 
   @edl_vendor "05c6"
   @edl_product "9008"
@@ -57,7 +80,7 @@ defmodule Mix.Tasks.Firmware.Qdl do
       Mix.raise("Firmware not found at #{firmware}. Run `mix firmware` first.")
 
     fwup = find_executable!("fwup", "https://github.com/fwup-home/fwup#installing")
-    qdl = find_executable!("qdl", "https://github.com/linux-msm/qdl")
+    qdl = System.find_executable("qdl") || prebuilt_qdl()
 
     bundle_dir = bootloader_bundle()
     work_dir = Path.join(System.tmp_dir!(), "nerves_qdl_#{System.unique_integer([:positive])}")
@@ -105,31 +128,86 @@ defmodule Mix.Tasks.Firmware.Qdl do
     flash_dir
   end
 
+  defp dl_dir, do: System.get_env("NERVES_DL_DIR", Path.expand("~/.nerves/dl"))
+
   defp bootloader_bundle do
-    dl_dir = System.get_env("NERVES_DL_DIR", Path.expand("~/.nerves/dl"))
-    zip = Path.join(dl_dir, "#{@bundle}.zip")
-    bundle_dir = Path.join(dl_dir, @bundle)
+    bundle_dir = Path.join(dl_dir(), @bundle)
 
     unless File.dir?(bundle_dir) do
-      unless File.regular?(zip) and sha256(zip) == @bundle_sha256 do
-        download!(@bundle_url, zip)
-      end
-
-      sha256(zip) == @bundle_sha256 ||
-        Mix.raise("#{zip} doesn't match its expected SHA-256. Delete it and try again.")
-
-      {:ok, _} = :zip.unzip(String.to_charlist(zip), cwd: String.to_charlist(dl_dir))
+      zip = fetch!("Arduino's eMMC bootloader bundle", @bundle_url, @bundle_sha256)
+      {:ok, _} = :zip.unzip(String.to_charlist(zip), cwd: String.to_charlist(dl_dir()))
     end
 
     bundle_dir
   end
 
-  defp download!(url, path) do
-    Mix.shell().info("Downloading Arduino's eMMC bootloader bundle from #{url}...")
+  defp prebuilt_qdl do
+    {build, sha256} = qdl_build!()
+    exe = if match?({:win32, _}, :os.type()), do: "qdl.exe", else: "qdl"
+    dir = Path.join(dl_dir(), "qdl_#{@qdl_version}_#{build}")
+    path = Path.join(dir, exe)
+
+    unless File.regular?(path) do
+      tarball = fetch!("qdl", "#{@qdl_url}/qdl_#{@qdl_version}_#{build}.tar.gz", sha256)
+
+      :ok =
+        :erl_tar.extract(String.to_charlist(tarball), [
+          :compressed,
+          cwd: String.to_charlist(dir),
+          files: [String.to_charlist(exe)]
+        ])
+
+      File.chmod!(path, 0o755)
+    end
+
+    path
+  end
+
+  defp qdl_build! do
+    [arch | _] = :erlang.system_info(:system_architecture) |> to_string() |> String.split("-")
+
+    platform =
+      case {:os.type(), arch} do
+        {{:win32, _}, _} -> {:windows, :any}
+        {{:unix, os}, arch} when arch in ~w(i386 i486 i586 i686) -> {os, "i686"}
+        {{:unix, os}, "arm" <> _} -> {os, "arm"}
+        {{:unix, os}, arch} -> {os, arch}
+      end
+
+    Map.get(@qdl_builds, platform) ||
+      Mix.raise("""
+      There's no prebuilt qdl for this computer (#{arch}).
+      Install qdl from https://github.com/linux-msm/qdl and make sure it's on your PATH.
+      """)
+  end
+
+  # Downloads url to the Nerves download directory unless a copy with the
+  # expected SHA-256 is already there.
+  defp fetch!(description, url, sha256) do
+    path = Path.join(dl_dir(), url |> URI.parse() |> Map.fetch!(:path) |> Path.basename())
+
+    unless File.regular?(path) and sha256(path) == sha256 do
+      download!(description, url, path)
+    end
+
+    sha256(path) == sha256 ||
+      Mix.raise("#{path} doesn't match its expected SHA-256. Delete it and try again.")
+
+    path
+  end
+
+  defp download!(description, url, path) do
+    Mix.shell().info("Downloading #{description} from #{url}...")
     {:ok, _} = Application.ensure_all_started([:inets, :ssl])
     File.mkdir_p!(Path.dirname(path))
 
-    ssl = [verify: :verify_peer, cacerts: :public_key.cacerts_get(), depth: 4]
+    ssl = [
+      verify: :verify_peer,
+      cacerts: :public_key.cacerts_get(),
+      depth: 4,
+      # GitHub redirects release downloads to a host with a wildcard certificate
+      customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]
+    ]
 
     case :httpc.request(:get, {String.to_charlist(url), []}, [ssl: ssl],
            stream: String.to_charlist(path)
