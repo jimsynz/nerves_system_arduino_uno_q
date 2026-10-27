@@ -1,1 +1,3 @@
 CONFIG_F2FS_FS=y
+# Ethernet gadget for usb0 networking, as in nerves_system_rpi0
+CONFIG_USB_ETH=y
