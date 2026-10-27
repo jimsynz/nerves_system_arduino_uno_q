@@ -23,7 +23,7 @@ defmodule NervesSystemArduinoUnoQ.MixProject do
   end
 
   def application do
-    []
+    [extra_applications: [:crypto, :inets, :public_key, :ssl]]
   end
 
   defp bootstrap(args) do
@@ -91,6 +91,7 @@ defmodule NervesSystemArduinoUnoQ.MixProject do
   defp package_files do
     [
       "fwup_include",
+      "lib",
       "linux",
       "package",
       "rootfs_overlay",

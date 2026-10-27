@@ -81,3 +81,13 @@ path = [
 precedence = "override"
 SPDX-FileCopyrightText = "2026 James Harton"
 SPDX-License-Identifier = "Apache-2.0"
+
+# Elixir code
+[[annotations]]
+path = [
+ "lib/**",
+ "test/**"
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 James Harton"
+SPDX-License-Identifier = "Apache-2.0"
