@@ -1,0 +1,8 @@
+config BR2_PACKAGE_QRTR
+	bool "qrtr"
+	help
+	  Userspace library and tools for the Qualcomm IPC Router
+	  (QRTR) protocol, used to talk to services on Qualcomm
+	  remote processors. The name service runs in the kernel.
+
+	  https://github.com/linux-msm/qrtr

@@ -1,0 +1,7 @@
+config BR2_PACKAGE_UNO_Q_FIRMWARE
+	bool "uno-q-firmware"
+	select BR2_PACKAGE_LINUX_FIRMWARE
+	help
+	  The linux-firmware files for the Arduino UNO Q's Qualcomm
+	  QRB2210: Adreno 702 GPU, ADSP and modem remote processors,
+	  WCN3990 WiFi and WCN3988 Bluetooth.

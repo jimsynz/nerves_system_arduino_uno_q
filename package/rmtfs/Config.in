@@ -1,0 +1,10 @@
+config BR2_PACKAGE_RMTFS
+	bool "rmtfs"
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	select BR2_PACKAGE_QRTR
+	help
+	  Qualcomm remote filesystem service. Serves the modem's
+	  persistent storage partitions (modemst1, modemst2, fsg) to
+	  the modem and starts the modem remote processor once ready.
+
+	  https://github.com/linux-msm/rmtfs

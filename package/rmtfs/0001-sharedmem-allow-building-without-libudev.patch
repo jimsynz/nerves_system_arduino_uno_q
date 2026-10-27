@@ -1,0 +1,33 @@
+From: James Harton <james.harton@alembic.com.au>
+Subject: [PATCH] sharedmem: allow building without libudev
+
+Defining RMTFS_NO_UDEV selects the sysfs-based rmtfs_mem lookup that
+Android builds already use, for systems without udev.
+---
+diff --git a/sharedmem.c b/sharedmem.c
+index c37a58d..af3fdad 100644
+--- a/sharedmem.c
++++ b/sharedmem.c
+@@ -5,10 +5,10 @@
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <inttypes.h>
+-#ifndef ANDROID
+-#include <libudev.h>
+-#else
++#if defined(ANDROID)
+ #include <sys/endian.h>
++#elif !defined(RMTFS_NO_UDEV)
++#include <libudev.h>
+ #endif
+ #include <stdbool.h>
+ #include <stdio.h>
+@@ -27,7 +27,7 @@ struct rmtfs_mem {
+ 	int fd;
+ };
+ 
+-#ifndef ANDROID
++#if !defined(ANDROID) && !defined(RMTFS_NO_UDEV)
+ 
+ static int parse_hex_sysattr(struct udev_device *dev, const char *name,
+ 			     uint64_t *value)

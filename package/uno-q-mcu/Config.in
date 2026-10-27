@@ -1,0 +1,10 @@
+config BR2_PACKAGE_UNO_Q_MCU
+	bool "uno-q-mcu"
+	depends on BR2_PACKAGE_UNO_Q_OPENOCD
+	help
+	  Tools for the UNO Q's STM32U585 MCU: the unoq-mcu flashing
+	  script and the Nerves logo boot animation for the MCU's
+	  LED matrix.
+
+comment "uno-q-mcu needs uno-q-openocd"
+	depends on !BR2_PACKAGE_UNO_Q_OPENOCD

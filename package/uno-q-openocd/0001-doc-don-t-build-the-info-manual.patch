@@ -1,0 +1,18 @@
+From: James Harton <james.harton@alembic.com.au>
+Subject: [PATCH] doc: don't build the info manual
+
+Building the Texinfo manual from a git checkout needs makeinfo on the
+build host. The manual isn't useful on the target.
+---
+diff --git a/doc/Makefile.am b/doc/Makefile.am
+index 17d051ff8..43a6c25b9 100644
+--- a/doc/Makefile.am
++++ b/doc/Makefile.am
+@@ -1,7 +1,5 @@
+ # SPDX-License-Identifier: GPL-2.0-or-later
+ 
+-info_TEXINFOS += %D%/openocd.texi
+-%C%_openocd_TEXINFOS = %D%/fdl.texi
+ 
+ dist_man_MANS += %D%/openocd.1
+ 

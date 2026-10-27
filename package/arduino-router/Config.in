@@ -1,0 +1,10 @@
+config BR2_PACKAGE_ARDUINO_ROUTER
+	bool "arduino-router"
+	depends on BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS
+	help
+	  Arduino's MsgPack-RPC router. It owns the serial link to the
+	  UNO Q's STM32U585 MCU (/dev/ttyHS1) and lets Linux programs
+	  call methods the MCU sketch provides, and vice versa, over a
+	  Unix socket.
+
+	  https://github.com/arduino/arduino-router

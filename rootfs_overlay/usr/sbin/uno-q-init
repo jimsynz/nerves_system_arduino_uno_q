@@ -1,0 +1,51 @@
+#!/bin/sh
+# Run by erlinit before the Erlang VM starts.
+#
+# The WiFi firmware runs on the modem remote processor. The modem needs two
+# helpers before it can boot: rmtfs serves its storage partitions and then
+# starts it, and tqftpserv serves it firmware files. Their drivers are modules
+# that nerves_runtime loads after the VM starts, so each helper waits for the
+# device it needs and is restarted if it exits.
+
+mkdir -p /run/rmtfs /tmp/tqftpserv
+
+for dev in /sys/class/block/mmcblk0p*; do
+    while IFS='=' read -r key value; do
+        [ "$key" = PARTNAME ] || continue
+        case "$value" in
+        modemst1 | modemst2 | fsg | fsc) ln -sf "/dev/${dev##*/}" "/run/rmtfs/$value" ;;
+        esac
+    done < "$dev/uevent"
+done
+
+# The modem fetches the WiFi firmware from tqftpserv while it boots, so rmtfs
+# mustn't start the modem until tqftpserv is running.
+tqftpserv_running() {
+    for comm in /proc/[0-9]*/comm; do
+        [ "$(cat "$comm" 2>/dev/null)" = tqftpserv ] && return 0
+    done
+    return 1
+}
+
+modem_remoteproc_ready() {
+    for rproc in /sys/class/remoteproc/remoteproc*; do
+        [ "$(cat "$rproc/name" 2>/dev/null)" = modem ] && return 0
+    done
+    return 1
+}
+
+(
+    until [ -e /dev/qcom_rmtfs_mem1 ] && modem_remoteproc_ready && tqftpserv_running; do sleep 1; done
+    while true; do
+        rmtfs -r -P -s -o /run/rmtfs
+        sleep 1
+    done
+) &
+
+(
+    until [ -e /proc/net/qrtr ] || [ -d /sys/module/qrtr ]; do sleep 1; done
+    while true; do
+        tqftpserv
+        sleep 1
+    done
+) &

@@ -1,0 +1,8 @@
+source "$NERVES_DEFCONFIG_DIR/package/arduino-router/Config.in"
+source "$NERVES_DEFCONFIG_DIR/package/mkbootimg/Config.in.host"
+source "$NERVES_DEFCONFIG_DIR/package/qrtr/Config.in"
+source "$NERVES_DEFCONFIG_DIR/package/rmtfs/Config.in"
+source "$NERVES_DEFCONFIG_DIR/package/tqftpserv/Config.in"
+source "$NERVES_DEFCONFIG_DIR/package/uno-q-firmware/Config.in"
+source "$NERVES_DEFCONFIG_DIR/package/uno-q-mcu/Config.in"
+source "$NERVES_DEFCONFIG_DIR/package/uno-q-openocd/Config.in"

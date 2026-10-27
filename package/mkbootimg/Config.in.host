@@ -1,0 +1,7 @@
+config BR2_PACKAGE_HOST_MKBOOTIMG
+	bool "host mkbootimg"
+	help
+	  Android Open Source Project tool for creating Android boot
+	  images. Qualcomm's ABL bootloader loads U-Boot from one.
+
+	  https://android.googlesource.com/platform/system/tools/mkbootimg

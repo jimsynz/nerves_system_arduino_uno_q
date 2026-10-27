@@ -1,0 +1,60 @@
+#!/bin/sh
+# Flash and inspect the UNO Q's STM32U585 MCU over SWD from Linux.
+#
+# Flash layout used by the ArduinoCore-zephyr loader (offsets from 0x08000000):
+#   0x000000  loader
+#   0x0d0000  boot animation (192 KiB), played until GPIO 70 goes high
+#   0x100000  sketch (0x0f0000 on older loaders)
+
+set -e
+
+OPENOCD="openocd -f board/arduino_uno_q.cfg"
+FLASH_RESET="reset_config srst_only srst_nogate srst_push_pull connect_assert_srst"
+ANIMATION_ADDR=0x080D0000
+SKETCH_ADDR=0x08100000
+
+usage() {
+    cat <<USAGE
+usage: unoq-mcu <command>
+
+  animation [file]          flash a boot animation image
+                            (default /usr/share/uno-q-mcu/nerves-bootanimation.bin)
+  sketch <loader.elf> <sketch.bin>
+                            flash a loader and sketch, as Arduino's
+                            flash_sketch.cfg does
+  dump <file> [addr] [len]  read MCU flash (default all 2 MiB)
+  reset                     reset the MCU
+USAGE
+    exit 1
+}
+
+case "$1" in
+animation)
+    file=${2:-/usr/share/uno-q-mcu/nerves-bootanimation.bin}
+    $OPENOCD -c "$FLASH_RESET" -c init -c "reset halt" \
+        -c "flash write_image erase $file $ANIMATION_ADDR bin" \
+        -c "verify_image $file $ANIMATION_ADDR bin" \
+        -c "reset run" -c shutdown
+    ;;
+sketch)
+    [ $# -eq 3 ] || usage
+    # 0x40036400 is the loader's "wait for app" flag in backup SRAM, so the
+    # sketch starts without waiting for Linux.
+    $OPENOCD -c "$FLASH_RESET" -c init -c "reset halt" \
+        -c "flash write_image erase $2" \
+        -c "flash write_image erase $3 $SKETCH_ADDR bin" \
+        -c "reset halt" -c resume -c "sleep 100" \
+        -c "mww 0x40036400 0xCAFFEEEE" -c "mww 0xE000EDF0 0xA05F0000" \
+        -c shutdown
+    ;;
+dump)
+    [ $# -ge 2 ] || usage
+    $OPENOCD -c init -c "dump_image $2 ${3:-0x08000000} ${4:-0x200000}" -c shutdown
+    ;;
+reset)
+    $OPENOCD -c "$FLASH_RESET" -c init -c "reset run" -c shutdown
+    ;;
+*)
+    usage
+    ;;
+esac

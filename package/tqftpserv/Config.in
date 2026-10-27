@@ -1,0 +1,9 @@
+config BR2_PACKAGE_TQFTPSERV
+	bool "tqftpserv"
+	select BR2_PACKAGE_QRTR
+	help
+	  TFTP server over QRTR. Qualcomm remote processors fetch
+	  firmware files through it, e.g. the WCN3990 WiFi firmware
+	  loaded by the modem.
+
+	  https://github.com/linux-msm/tqftpserv
