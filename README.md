@@ -19,7 +19,25 @@ This is the base Nerves System configuration for the
 | Audio          | No - not supported by the mainline device tree      |
 | Camera         | No - not supported by the mainline device tree      |
 
-This system is a work in progress. Provisioning a board is not automated yet.
+This system is a work in progress.
+
+## Installing Nerves on a board
+
+The first install, or a recovery, goes over USB using the QRB2210's Emergency
+Download (EDL) mode. It works whatever is on the eMMC. You need
+[`qdl`](https://github.com/linux-msm/qdl) and `fwup` installed, then:
+
+```sh
+mix firmware
+mix firmware.qdl
+```
+
+`mix firmware.qdl` explains how to put the board into EDL mode (a jumper
+between `GND` and `USB_BOOT` on the JCTL header) and waits for it. On Linux you
+need access to USB device `05c6:9008`; see `mix help firmware.qdl` for a udev
+rule. It downloads Arduino's eMMC bootloader bundle the first time.
+
+After that, update the board over USB networking or WiFi with `mix upload`.
 
 ## Boot chain
 
@@ -43,9 +61,10 @@ end of the GPT:
 | 70        | rootfs_b | squashfs root filesystem         |
 | 71        | data     | f2fs application data            |
 
-fwup can't write a GPT with this many entries, so the partition table is
-created when the board is provisioned and fwup only writes inside it. The
-offsets in `fwup_include/fwup-common.conf` must match it.
+fwup can't write a GPT with this many entries, so `mix firmware.qdl` writes
+the partition table and fwup only writes inside it. The offsets in
+`fwup_include/fwup-common.conf` must match `lib/nerves_system_arduino_uno_q/qdl.ex`;
+the tests check that they do.
 
 The eMMC's `boot0` hardware partition holds the board's WiFi MAC address,
 Bluetooth address and board revision. U-Boot reads them; nothing in Nerves
