@@ -100,3 +100,15 @@ unoq-mcu reset
 
 The MCU's loader plays a boot animation on the LED matrix until GPIO 70 goes
 high. `unoq-mcu animation` replaces Arduino's animation with a Nerves logo.
+
+To run your own sketch, build it with `arduino-cli compile -b arduino:zephyr:unoq`
+and flash the core's loader (`firmwares/zephyr-arduino_uno_q_stm32u585xx.elf`)
+with the sketch's `.elf-zsk.bin`:
+
+```sh
+unoq-mcu sketch zephyr-arduino_uno_q_stm32u585xx.elf my_sketch.ino.elf-zsk.bin
+```
+
+Sketches using [Arduino_RouterBridge](https://github.com/arduino-libraries/Arduino_RouterBridge)
+can then provide and call methods through the router, as they do on Arduino's
+Debian image.
