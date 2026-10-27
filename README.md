@@ -28,25 +28,83 @@ This is the base Nerves System configuration for the
 
 This system is a work in progress.
 
+## Using
+
+Add the system to your Nerves project's dependencies with a target of your
+choosing, for example `uno_q`:
+
+```elixir
+@all_targets [:uno_q]
+
+defp deps do
+  [
+    # ...
+    {:nerves_system_arduino_uno_q,
+     github: "jimsynz/nerves_system_arduino_uno_q",
+     tag: "v0.1.0",
+     runtime: false,
+     targets: :uno_q}
+  ]
+end
+```
+
+Nerves downloads the prebuilt system from the matching GitHub release. Then
+build firmware with `MIX_TARGET=uno_q mix firmware`. See the
+[Nerves getting started guide](https://hexdocs.pm/nerves/getting-started.html)
+for setting up a project.
+
 ## Installing Nerves on a board
 
 The first install, or a recovery, goes over USB using the QRB2210's Emergency
-Download (EDL) mode. It works whatever is on the eMMC. You need `fwup`
-installed, then:
+Download (EDL) mode, which is built into the chip. It works whatever is on the
+eMMC, including Arduino's Debian image.
 
-```sh
-mix firmware
-mix firmware.qdl
+> **Warning:** provisioning erases the eMMC, including Arduino's Debian image and anything
+> stored on it. To go back to Debian, flash Arduino's image with
+> [`arduino-flasher-cli`](https://github.com/arduino/arduino-flasher-cli).
+> The MCU's flash isn't touched.
+
+You need [`fwup`](https://github.com/fwup-home/fwup#installing) installed. If
+[`qdl`](https://github.com/linux-msm/qdl) isn't on your `PATH`,
+`mix firmware.qdl` downloads Arduino's prebuilt `qdl` the first time, along
+with Arduino's eMMC bootloader bundle.
+
+On Linux, let your user access the board in EDL mode (USB `05c6:9008`) and keep
+ModemManager away from it with a udev rule, for example in
+`/etc/udev/rules.d/70-arduino-uno-q-edl.rules`:
+
+```text
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="9008", MODE="0660", GROUP="plugdev", ENV{ID_MM_DEVICE_IGNORE}="1"
 ```
 
-`mix firmware.qdl` explains how to put the board into EDL mode (a jumper
-between `GND` and `USB_BOOT` on the JCTL header) and waits for it. On Linux you
-need access to USB device `05c6:9008`; see `mix help firmware.qdl` for a udev
-rule. The first time, it downloads Arduino's eMMC bootloader bundle and, unless
-[`qdl`](https://github.com/linux-msm/qdl) is already on your `PATH`, Arduino's
-prebuilt `qdl`.
+Then run `sudo udevadm control --reload-rules && sudo udevadm trigger`. Use a
+group your user is in if your distribution doesn't have `plugdev`.
+
+To install:
+
+1. Build the firmware: `MIX_TARGET=uno_q mix firmware`
+2. Run `MIX_TARGET=uno_q mix firmware.qdl`. It prepares everything, then
+   waits for the board.
+3. Unplug the UNO Q's USB-C cable.
+4. Connect `GND` to `USB_BOOT` with a jumper or a wire. They're the two pins
+   in the rightmost column of the JCTL header.
+5. Plug the USB-C cable back in, directly into your computer. `mix
+   firmware.qdl` notices the board and flashes it, which takes a minute or two.
+6. Unplug the USB-C cable, remove the jumper and plug the cable back in. The
+   board boots Nerves.
 
 After that, update the board over USB networking or WiFi with `mix upload`.
+
+### Troubleshooting
+
+* If `mix firmware.qdl` never sees the board, check the jumper and that it was
+  fitted before the cable was plugged in. In EDL mode the board shows up as
+  `05c6:9008` in `lsusb`.
+* If `qdl` can't open the device, check the udev rule. If the `qcserial`
+  kernel module has claimed the board (it shows up as `/dev/ttyUSB*`), unload
+  it with `sudo modprobe -r qcserial` or blacklist it.
+* If flashing fails partway through, use a different USB port or cable. Hubs,
+  docks and some USB 3 ports cause trouble.
 
 ## Boot chain
 

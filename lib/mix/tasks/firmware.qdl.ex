@@ -22,9 +22,10 @@ defmodule Mix.Tasks.Firmware.Qdl do
   ## Requirements
 
     * `fwup` on your `PATH`
-    * access to USB device `05c6:9008`. On Linux, add a udev rule such as:
+    * access to USB device `05c6:9008`. On Linux, add a udev rule such as
+      this, which also keeps ModemManager away from the board:
 
-          SUBSYSTEMS=="usb", ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="9008", MODE="0660", GROUP="plugdev"
+          SUBSYSTEMS=="usb", ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="9008", MODE="0660", GROUP="plugdev", ENV{ID_MM_DEVICE_IGNORE}="1"
 
   It uses [`qdl`](https://github.com/linux-msm/qdl) to talk to the board. If
   `qdl` isn't on your `PATH`, it downloads Arduino's prebuilt `qdl` for your
