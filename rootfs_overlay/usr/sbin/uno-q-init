@@ -6,6 +6,10 @@
 # starts it, and tqftpserv serves it firmware files. Their drivers are modules
 # that nerves_runtime loads after the VM starts, so each helper waits for the
 # device it needs and is restarted if it exits.
+#
+# It also runs arduino-router, the MsgPack-RPC link to the STM32U585 MCU,
+# the way Arduino's Debian image does. GPIO 70 tells the MCU that Linux is
+# ready, which ends its boot animation.
 
 mkdir -p /run/rmtfs /tmp/tqftpserv
 
@@ -46,6 +50,22 @@ modem_remoteproc_ready() {
     until [ -e /proc/net/qrtr ] || [ -d /sys/module/qrtr ]; do sleep 1; done
     while true; do
         tqftpserv
+        sleep 1
+    done
+) &
+
+(
+    gpioset -c /dev/gpiochip1 -t0 37=0
+    until [ -e /dev/ttyHS1 ]; do sleep 1; done
+    while true; do
+        arduino-router --unix-port /var/run/arduino-router.sock \
+            --serial-port /dev/ttyHS1 --serial-baudrate 115200 \
+            --after-ready "gpioset -c /dev/gpiochip1 -t0 70=1" \
+            > /run/arduino-router.log 2>&1
+        # Reset the MCU so it restarts its boot animation, as Arduino's unit does
+        gpioset -c /dev/gpiochip1 -t0 70=0
+        gpioset -c /dev/gpiochip1 -t0 38=0
+        gpioset -c /dev/gpiochip1 -t0 38=1
         sleep 1
     done
 ) &
