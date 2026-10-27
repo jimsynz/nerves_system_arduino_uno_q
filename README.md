@@ -39,11 +39,7 @@ choosing, for example `uno_q`:
 defp deps do
   [
     # ...
-    {:nerves_system_arduino_uno_q,
-     github: "jimsynz/nerves_system_arduino_uno_q",
-     tag: "v0.1.0",
-     runtime: false,
-     targets: :uno_q}
+    {:nerves_system_arduino_uno_q, "~> 0.1", runtime: false, targets: :uno_q}
   ]
 end
 ```

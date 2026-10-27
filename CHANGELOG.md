@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.1
+
+* `mix firmware.qdl` downloads Arduino's prebuilt `qdl` if it isn't on your
+  `PATH`, so you only need `fwup` installed
+* The README explains adding the system to a project and provisioning a board
+  step by step, with a udev rule that also keeps ModemManager away from the
+  board in EDL mode, and troubleshooting tips
+* The Hex package metadata lists Apache-2.0, which covers the Elixir code and
+  the MCU tooling
+
 ## v0.1.0
 
 The first release of the rebuilt Arduino UNO Q system, based on mainline

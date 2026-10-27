@@ -87,7 +87,7 @@ defmodule NervesSystemArduinoUnoQ.MixProject do
   defp package do
     [
       files: package_files(),
-      licenses: ["GPL-2.0-only", "GPL-2.0-or-later"],
+      licenses: ["Apache-2.0", "GPL-2.0-only", "GPL-2.0-or-later"],
       links: %{
         "GitHub" => @source_url,
         "REUSE Compliance" =>
