@@ -20,6 +20,9 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    # The unit tests don't need the system, so don't build or look for it.
+    env:
+      NERVES_ENV_DISABLED: 1
     steps:
       - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1

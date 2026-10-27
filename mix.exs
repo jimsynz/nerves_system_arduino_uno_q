@@ -13,7 +13,7 @@ defmodule NervesSystemArduinoUnoQ.MixProject do
       app: @app,
       version: @version,
       elixir: "~> 1.17",
-      compilers: compilers(Mix.env()),
+      compilers: Mix.compilers() ++ [:nerves_package],
       nerves_package: nerves_package(),
       description: description(),
       package: package(),
@@ -26,10 +26,6 @@ defmodule NervesSystemArduinoUnoQ.MixProject do
   def application do
     [extra_applications: [:crypto, :inets, :public_key, :ssl]]
   end
-
-  # The unit tests don't need the system, so don't build it for them.
-  defp compilers(:test), do: Mix.compilers()
-  defp compilers(_env), do: Mix.compilers() ++ [:nerves_package]
 
   defp bootstrap(args) do
     set_target()
