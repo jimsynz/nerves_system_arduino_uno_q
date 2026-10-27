@@ -16,8 +16,12 @@ This is the base Nerves System configuration for the
 | WiFi           | Yes - VintageNet (ath10k WCN3990)                   |
 | Bluetooth      | WCN3988, `hci0` comes up (otherwise untested)       |
 | MCU            | STM32U585 via `arduino-router` and `unoq-mcu`       |
+| GPU            | Adreno 702 kernel driver only - no Mesa userspace   |
+| Display        | Kernel DRM/KMS with USB-C DisplayPort (untested)    |
+| Video codec    | No - Venus fails to probe (see below)               |
 | Audio          | No - not supported by the mainline device tree      |
-| Camera         | No - not supported by the mainline device tree      |
+| Camera, ISP    | No - not supported by the mainline device tree      |
+| DSP            | ADSP runs, but nothing uses it yet                  |
 
 This system is a work in progress.
 
@@ -112,3 +116,28 @@ unoq-mcu sketch zephyr-arduino_uno_q_stm32u585xx.elf my_sketch.ino.elf-zsk.bin
 Sketches using [Arduino_RouterBridge](https://github.com/arduino-libraries/Arduino_RouterBridge)
 can then provide and call methods through the router, as they do on Arduino's
 Debian image.
+
+## Multimedia and accelerators
+
+The mainline kernel and device tree support less of the QRB2210 than
+Arduino's kernel fork does:
+
+* **GPU** (Adreno 702): the `msm` DRM driver binds, loads its firmware and
+  provides `/dev/dri/renderD128`. The system has no Mesa, so there's no
+  OpenGL ES or Vulkan.
+* **Display**: the display controller, DSI and the ANX7625 bridge for
+  DisplayPort over USB-C come up as DRM `card0` with a `DP-1` connector. It
+  hasn't been tested with a monitor, and nothing in the system drives it.
+* **Video codec** (Venus, AR50-Lite): the driver asks for
+  `qcom/venus-6.0/venus.mbn`, which isn't installed, so it fails to probe.
+  linux-firmware's AR50-Lite firmware is `qcom/vpu/ar50lt_p1_gen2_s6.mbn`.
+  While the codec is unprobed, the clock controller and interconnects never
+  finish their `sync_state`, so unused clocks and bandwidth stay enabled.
+* **Audio**: the ADSP remote processor boots, but the mainline device tree
+  has no sound card, so there's no ALSA playback or capture.
+* **Camera and ISP**: CAMSS is disabled in the mainline device tree and the
+  OPE image signal processor driver only exists in Arduino's kernel.
+* **DSP compute**: `/dev/fastrpc-adsp` exists, but the system has no FastRPC
+  library or Hexagon runtime. The QRB2210 has no separate compute DSP.
+
+Audio, camera and the ISP need Arduino's out-of-tree kernel patches.
