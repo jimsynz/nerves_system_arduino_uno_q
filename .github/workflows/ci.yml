@@ -20,9 +20,12 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-24.04
-    # The unit tests don't need the system, so don't build or look for it.
+    # The unit tests don't need the system. NERVES_ENV_DISABLED stops the
+    # nerves_package compiler building it, and NERVES_PRECOMPILE stops Nerves
+    # looking for a system artefact that only the build job produces.
     env:
       NERVES_ENV_DISABLED: 1
+      NERVES_PRECOMPILE: 1
     steps:
       - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1
