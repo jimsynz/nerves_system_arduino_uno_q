@@ -1,8 +1,9 @@
 defmodule NervesSystemArduinoUnoQ.MixProject do
   use Mix.Project
 
+  @github_organization "jimsynz"
   @app :nerves_system_arduino_uno_q
-  @source_url "https://harton.dev/james/#{@app}"
+  @source_url "https://github.com/#{@github_organization}/#{@app}"
   @version Path.join(__DIR__, "VERSION")
            |> File.read!()
            |> String.trim()
@@ -39,7 +40,9 @@ defmodule NervesSystemArduinoUnoQ.MixProject do
   defp nerves_package do
     [
       type: :system,
-      artifact_sites: [],
+      artifact_sites: [
+        {:github_releases, "#{@github_organization}/#{@app}"}
+      ],
       build_runner_opts: build_runner_opts(),
       platform: Nerves.System.BR,
       platform_config: [
@@ -84,7 +87,11 @@ defmodule NervesSystemArduinoUnoQ.MixProject do
     [
       files: package_files(),
       licenses: ["GPL-2.0-only", "GPL-2.0-or-later"],
-      links: %{"Source" => @source_url}
+      links: %{
+        "GitHub" => @source_url,
+        "REUSE Compliance" =>
+          "https://api.reuse.software/info/github.com/#{@github_organization}/#{@app}"
+      }
     ]
   end
 

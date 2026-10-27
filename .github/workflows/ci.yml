@@ -1,0 +1,69 @@
+# SPDX-FileCopyrightText: None
+# SPDX-License-Identifier: CC0-1.0
+
+name: CI
+
+on: [push]
+
+env:
+  OTP_VERSION: 29.0.6
+  ELIXIR_VERSION: 1.20.4-otp-29
+  NERVES_BOOTSTRAP_VERSION: 1.16.0
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ env.OTP_VERSION }}
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+      - run: mix archive.install hex nerves_bootstrap ${{ env.NERVES_BOOTSTRAP_VERSION }} --force
+      - run: mix deps.get
+      - run: mix format --check-formatted
+      - run: mix test
+  get-br-dependencies:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gridpoint-com/actions-nerves-system@v1
+      - name: Get Buildroot Dependencies
+        uses: ./.actions/get-br-dependencies
+        with:
+          otp-version: ${{ env.OTP_VERSION }}
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          nerves-bootstrap-version: ${{ env.NERVES_BOOTSTRAP_VERSION }}
+  build-system:
+    needs: [get-br-dependencies]
+    runs-on: ubuntu-24.04
+    steps:
+      # A full build needs about 17 GB, more than a standard runner has free.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: actions/checkout@v4
+      - uses: gridpoint-com/actions-nerves-system@v1
+      - name: Build nerves_system
+        uses: ./.actions/build-system
+        with:
+          otp-version: ${{ env.OTP_VERSION }}
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          nerves-bootstrap-version: ${{ env.NERVES_BOOTSTRAP_VERSION }}
+  deploy-system:
+    needs: [build-system]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gridpoint-com/actions-nerves-system@v1
+      - name: Deploy nerves_system
+        uses: ./.actions/deploy-system
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

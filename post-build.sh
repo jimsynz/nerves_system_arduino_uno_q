@@ -11,3 +11,8 @@ ln -sf ops.fw $TARGET_DIR/usr/share/fwup/revert.fw
 
 # Copy the fwup includes to the images dir
 cp -rf $NERVES_DEFCONFIG_DIR/fwup_include $BINARIES_DIR
+
+# tqftpserv keeps its state in /var/lib/tqftpserv, but the root filesystem is
+# read-only. The link is made here rather than in rootfs_overlay because Hex
+# packages can't contain absolute symlinks.
+ln -sfn /tmp/tqftpserv $TARGET_DIR/var/lib/tqftpserv
