@@ -1,3 +1,7 @@
 CONFIG_F2FS_FS=y
 # Ethernet gadget for usb0 networking, as in nerves_system_rpi0
 CONFIG_USB_ETH=y
+# LED triggers the official Nerves systems enable. Delux needs pattern.
+CONFIG_LEDS_TRIGGER_ACTIVITY=y
+CONFIG_LEDS_TRIGGER_ONESHOT=y
+CONFIG_LEDS_TRIGGER_PATTERN=y

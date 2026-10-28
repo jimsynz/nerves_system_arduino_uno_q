@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.2
+
+* Enable the pattern, oneshot and activity LED triggers, which the official
+  Nerves systems also enable. Without the pattern trigger, Delux fails to
+  start, and so does Nerves Livebook
+
 ## v0.1.1
 
 * `mix firmware.qdl` downloads Arduino's prebuilt `qdl` if it isn't on your
