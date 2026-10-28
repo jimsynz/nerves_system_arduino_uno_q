@@ -1,4 +1,7 @@
 CONFIG_F2FS_FS=y
+# VintageNet gives each interface its own routing table
+CONFIG_IP_ADVANCED_ROUTER=y
+CONFIG_IP_MULTIPLE_TABLES=y
 # Ethernet gadget for usb0 networking, as in nerves_system_rpi0
 CONFIG_USB_ETH=y
 # LED triggers the official Nerves systems enable. Delux needs pattern.

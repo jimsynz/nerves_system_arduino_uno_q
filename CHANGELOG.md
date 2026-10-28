@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.3
+
+* Enable policy routing in the kernel. VintageNet gives each interface its
+  own routing table, so without it installing routes failed with
+  "RTNETLINK answers: Operation not supported" and WiFi kept reconnecting
+
 ## v0.1.2
 
 * Enable the pattern, oneshot and activity LED triggers, which the official
