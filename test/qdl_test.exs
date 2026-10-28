@@ -4,14 +4,32 @@ defmodule NervesSystemArduinoUnoQ.QDLTest do
   alias NervesSystemArduinoUnoQ.QDL
 
   # Arduino's GPT: 72 entries of 128 bytes from LBA 2, with the 69th last.
+  # ABL's boot slots, holding U-Boot, are entries 11 and 12.
   @entries 72 * 128
+  @abl_slots %{11 => "boot_a", 12 => "boot_b"}
 
   defp arduino_gpt do
-    entry = fn n -> <<n::little-128>> <> :binary.copy(<<n>>, 112) end
-    array = Enum.map_join(1..69, entry) <> :binary.copy(<<0>>, (72 - 69) * 128)
+    array = Enum.map_join(1..69, &arduino_entry/1) <> :binary.copy(<<0>>, (72 - 69) * 128)
     main = :binary.copy(<<0xAA>>, 1024) <> array <> :binary.copy(<<0>>, 17_408 - 1024 - @entries)
     backup = array <> :binary.copy(<<0xBB>>, 512)
     {main, backup}
+  end
+
+  defp arduino_entry(n) when is_map_key(@abl_slots, n) do
+    name = :unicode.characters_to_binary(@abl_slots[n], :utf8, {:utf16, :little})
+
+    <<n::little-128>> <>
+      :binary.copy(<<n>>, 32) <>
+      <<0x1000000000000000::little-64>> <> name <> :binary.copy(<<0>>, 72 - byte_size(name))
+  end
+
+  defp arduino_entry(n), do: <<n::little-128>> <> :binary.copy(<<n>>, 112)
+
+  defp entry(gpt, number), do: binary_part(gpt, 1024 + (number - 1) * 128, 128)
+
+  defp attributes(entry) do
+    <<_::binary-48, attributes::little-64, _::binary-72>> = entry
+    attributes
   end
 
   test "keeps Qualcomm's partitions and headers and adds the Nerves partitions" do
@@ -21,7 +39,11 @@ defmodule NervesSystemArduinoUnoQ.QDLTest do
     assert byte_size(new_main) == byte_size(main)
     assert byte_size(new_backup) == byte_size(backup)
     assert binary_part(new_main, 0, 1024) == binary_part(main, 0, 1024)
-    assert binary_part(new_main, 1024, 66 * 128) == binary_part(main, 1024, 66 * 128)
+
+    for number <- 1..66, not is_map_key(@abl_slots, number) do
+      assert entry(new_main, number) == entry(main, number), "entry #{number}"
+    end
+
     assert binary_part(new_backup, 0, @entries) == binary_part(new_main, 1024, @entries)
     assert binary_part(new_backup, @entries, 512) == binary_part(backup, @entries, 512)
 
@@ -39,6 +61,25 @@ defmodule NervesSystemArduinoUnoQ.QDLTest do
     end
 
     assert binary_part(new_main, 1024 + 71 * 128, 128) == :binary.copy(<<0>>, 128)
+  end
+
+  test "marks both of ABL's boot slots successful, with slot A active" do
+    {main, backup} = arduino_gpt()
+    {new_main, _new_backup} = QDL.gpt(main, backup)
+
+    for number <- Map.keys(@abl_slots) do
+      <<old_head::binary-48, _::binary-8, old_name::binary-72>> = entry(main, number)
+      assert <<^old_head::binary-48, _::binary-8, ^old_name::binary-72>> = entry(new_main, number)
+    end
+
+    # Bits 48-49 priority, 50 active, 51-53 retry count, 54 successful,
+    # 55 unbootable, as in ABL's PartitionTableUpdate.h.
+    assert attributes(entry(new_main, 11)) == 0x107F000000000000
+    assert attributes(entry(new_main, 12)) == 0x107A000000000000
+
+    for number <- 67..68 do
+      assert attributes(entry(new_main, number)) == 0x1000000000000000
+    end
   end
 
   test "points the last-partition patches at the data partition" do

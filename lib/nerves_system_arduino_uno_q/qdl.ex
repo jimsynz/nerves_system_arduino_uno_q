@@ -12,6 +12,8 @@ defmodule NervesSystemArduinoUnoQ.QDL do
   firmware update.
   """
 
+  import Bitwise
+
   @sector_size 512
 
   # GPT entries are 128 bytes from LBA 2. Arduino's GPT has room for 72.
@@ -21,6 +23,23 @@ defmodule NervesSystemArduinoUnoQ.QDL do
 
   # Partition attribute bit 60 is set on every partition in Arduino's GPT.
   @gpt_attributes 0x1000000000000000
+
+  # ABL keeps its A/B slot state in the attributes of the first `boot_a` and
+  # `boot_b` entries, which hold U-Boot. It counts down the active slot's
+  # retries on every boot until the OS marks it successful, then gives up
+  # and stops in fastboot. Nothing on Nerves marks it, and both slots hold
+  # the same U-Boot, so both start out successful with slot A active.
+  @abl_priority_shift 48
+  @abl_active 1 <<< 50
+  @abl_max_retries 7 <<< 51
+  @abl_successful 1 <<< 54
+  @abl_slots [
+    {"boot_a",
+     @gpt_attributes ||| 3 <<< @abl_priority_shift ||| @abl_active ||| @abl_max_retries |||
+       @abl_successful},
+    {"boot_b",
+     @gpt_attributes ||| 2 <<< @abl_priority_shift ||| @abl_max_retries ||| @abl_successful}
+  ]
   @linux_type "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
   @basic_data_type "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"
 
@@ -113,8 +132,9 @@ defmodule NervesSystemArduinoUnoQ.QDL do
 
   @doc """
   Replaces Arduino's last partitions in its primary and backup GPT images with
-  the Nerves partitions. Header and partition array CRCs are fixed up by
-  `patch0.xml` while flashing, once the eMMC size is known.
+  the Nerves partitions, and marks both of ABL's boot slots successful. Header
+  and partition array CRCs are fixed up by `patch0.xml` while flashing, once
+  the eMMC size is known.
   """
   @spec gpt(binary(), binary()) :: {binary(), binary()}
   def gpt(main, backup) do
@@ -127,7 +147,12 @@ defmodule NervesSystemArduinoUnoQ.QDL do
     <<_backup_array::binary-size(^array_bytes), backup_tail::binary>> = backup
 
     keep = (@first_nerves_partition - 1) * @gpt_entry_size
-    <<qualcomm::binary-size(^keep), _::binary>> = array
+    <<arduino_qualcomm::binary-size(^keep), _::binary>> = array
+
+    qualcomm =
+      for <<entry::binary-size(@gpt_entry_size) <- arduino_qualcomm>>,
+        into: <<>>,
+        do: abl_slot_entry(entry)
 
     nerves = Enum.map_join(@partitions, &gpt_entry/1)
     padding = :binary.copy(<<0>>, array_bytes - keep - byte_size(nerves))
@@ -244,15 +269,25 @@ defmodule NervesSystemArduinoUnoQ.QDL do
       ~s(start_byte_hex="0x#{Integer.to_string(start * @sector_size, 16)}" start_sector="#{start}"/>)
   end
 
+  defp abl_slot_entry(<<head::binary-48, _attributes::binary-8, name::binary-72>> = entry) do
+    case Enum.find(@abl_slots, fn {slot, _} -> name_field(slot) == name end) do
+      {_slot, attributes} -> head <> <<attributes::little-64>> <> name
+      nil -> entry
+    end
+  end
+
   defp gpt_entry({_number, name, type, first, count}) do
     last = if count == :rest, do: first - 1, else: first + count - 1
-    name_utf16 = :unicode.characters_to_binary(name, :utf8, {:utf16, :little})
-    name_field = name_utf16 <> :binary.copy(<<0>>, 72 - byte_size(name_utf16))
 
     guid_bytes(type) <>
       :crypto.strong_rand_bytes(16) <>
       <<first::little-64, last::little-64, @gpt_attributes::little-64>> <>
-      name_field
+      name_field(name)
+  end
+
+  defp name_field(name) do
+    name_utf16 = :unicode.characters_to_binary(name, :utf8, {:utf16, :little})
+    name_utf16 <> :binary.copy(<<0>>, 72 - byte_size(name_utf16))
   end
 
   # GPT stores the first three GUID fields little-endian.

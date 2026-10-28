@@ -5,6 +5,11 @@
 * Enable policy routing in the kernel. VintageNet gives each interface its
   own routing table, so without it installing routes failed with
   "RTNETLINK answers: Operation not supported" and WiFi kept reconnecting
+* `mix firmware.qdl` marks both of ABL's boot slots successful. Before, ABL
+  counted down a retry on every boot and, after about seven boots, stopped in
+  fastboot instead of loading U-Boot. Firmware updates don't rewrite the
+  partition table, so boards provisioned with an earlier version need
+  provisioning again with `mix firmware.qdl`
 
 ## v0.1.2
 

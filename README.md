@@ -101,6 +101,9 @@ After that, update the board over USB networking or WiFi with `mix upload`.
   it with `sudo modprobe -r qcserial` or blacklist it.
 * If flashing fails partway through, use a different USB port or cable. Hubs,
   docks and some USB 3 ports cause trouble.
+* If a board provisioned with version 0.1.2 or earlier stops booting after a
+  few restarts and shows up as `18d1:d00d` (fastboot), provision it again
+  with this version's `mix firmware.qdl`.
 
 ## Boot chain
 
@@ -109,6 +112,12 @@ U-Boot from the Android boot image in the `boot_a` partition. U-Boot keeps its
 environment in the eMMC at 4 MiB and uses the standard Nerves A/B logic to load
 the kernel and device tree from a FAT boot partition. U-Boot also adds the
 board's WiFi MAC and Bluetooth addresses to the device tree.
+
+ABL has its own A/B slots, which only choose between the two copies of
+U-Boot. ABL stops in fastboot if the active slot isn't marked successful
+within seven boots, so `mix firmware.qdl` writes the partition table with both
+slots already marked successful. Nerves' A/B firmware updates are handled by
+U-Boot and never change ABL's slots.
 
 ## eMMC layout
 
